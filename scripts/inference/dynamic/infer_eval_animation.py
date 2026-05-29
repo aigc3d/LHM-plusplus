@@ -60,7 +60,7 @@ from core.datasets.evaluation import (
     VideoHumanDynamicBenchmarkAnimation,
 )
 from core.models.animation import patch_model_animation_infer
-from core.utils.model_card import MODEL_CONFIG
+from core.utils.model_card import MODEL_CONFIG, require_animation_model
 from core.utils.model_download_utils import AutoModelQuery, prior_model_check
 from scripts.inference.app_inference import build_app_model, parse_app_configs
 from video_benchmark_infer_helpers import (
@@ -641,6 +641,11 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+
+    try:
+        args.model_name = require_animation_model(args.model_name)
+    except ValueError as ex:
+        parser.error(str(ex))
 
     if args.dataset:
         preset = LHMPP_BENCHMARK_PRESETS[args.dataset]

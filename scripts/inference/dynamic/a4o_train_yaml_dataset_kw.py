@@ -18,6 +18,7 @@ LEGACY_DEFAULT_SUBSET_NAME = "dna_a4o_tar"
 # CLI default: try these in order until one exists under ``dataset.subsets``
 AUTO_SUBSET_NAME = "auto"
 SUBSET_NAME_FALLBACKS: Tuple[str, ...] = (
+    "dna_lhmpp_folder",
     LEGACY_DEFAULT_SUBSET_NAME,
     "video_human_lhm_a4o_tar",
     "video_human_a4o_tar",

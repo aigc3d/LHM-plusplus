@@ -58,7 +58,7 @@ If you prefer Chinese documentation, please see the [Chinese README](./README_CN
 - [x] Release the codes and pretrained weights
 - [x] HuggingFace Demo Integration 🤗🤗🤗
 - [x] **Benchmarks — dynamic reconstruction:** evaluation code and validation data for **NeuMan**, **SelfCapture**, **Vid2Avatar** (see [Dynamic benchmark evaluation](#dynamic-benchmark-evaluation))
-- [ ] **Benchmarks — novel view/pose synthesis:** TODO (**THuman-2.1**, **DNA-Rendering**, etc.)
+- [ ] **Benchmarks — novel view/pose synthesis:** TODO (**THuman-2.1**, etc.); **DNA-Rendering** data download script (`--download` / `--untar`) is available — evaluation metrics coming later (see [Reconstruction benchmark download](#reconstruction-benchmark-download))
 - [ ] ModelScope Space Online Demo
 - [ ] Release Training data & Testing Data (License Available)
 - [ ] Training Codes Release 
@@ -377,6 +377,26 @@ python tools/metrics/compute_dynamic_metrics.py --root ./exps/benchmarks/dynamic
 ```
 
 Each run writes `dynamic_metrics_<dataset>.meta.json` under `./exps/benchmarks/dynamic/`.
+
+### Reconstruction benchmark download
+
+**DNA-Rendering** test benchmark for novel view / pose synthesis evaluation: **16** scenes, about **100 GB** of per-camera tar archives. Because of the size, download and extraction are **two separate steps** (download first, check disk space, then untar).
+
+Data lands under `evaluation/reconstruction_benchmark/` (already in `.gitignore`). ModelScope: [`Damo_XR_Lab/LHMPP-DNA-Benchmark`](https://www.modelscope.cn/models/Damo_XR_Lab/LHMPP-DNA-Benchmark).
+
+```bash
+# Step 1: download all scene tars from ModelScope (~100 GB)
+python scripts/download_evaluation/download_reconstruction_benchmark.py --download
+
+# Step 2: extract all tars (needs additional disk space; tar files are kept)
+python scripts/download_evaluation/download_reconstruction_benchmark.py --untar
+
+# Optional: one scene only — download or untar all {scene_id}-Cam*.tar
+python scripts/download_evaluation/download_reconstruction_benchmark.py --download --scene_id 0012_09
+python scripts/download_evaluation/download_reconstruction_benchmark.py --untar --scene_id 0012_09
+```
+
+`--scene_id` filters by scene prefix (e.g. `0012_09` → `0012_09-Cam00.tar`, `0012_09-Cam01.tar`, …). `--untar` writes paths from inside each archive (e.g. `0012_09-Cam00/`) under `reconstruction_benchmark/` without an extra wrapper folder. Re-running without `--force` skips existing files. Evaluation inference and metrics for this benchmark are not included yet.
 
 
 ## More Works

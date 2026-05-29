@@ -27,9 +27,17 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 import numpy as np
 import torch
 
+from core.utils.model_card import (  # noqa: E402
+    MODEL_CONFIG,
+    require_animation_model,
+)
 from metric_utils import (
     PSNR_DEFINITION,
     branch_record,
@@ -318,6 +326,16 @@ def main() -> None:
     ap.add_argument("--root", required=True, help="Benchmark root (contains <dataset>-* runs)")
     ap.add_argument("--dataset", required=True, help="Dataset prefix, e.g. neuman")
     ap.add_argument(
+        "--model-name",
+        type=str,
+        default="LHMPP-700M-PixelShuffle",
+        choices=sorted(MODEL_CONFIG.keys()),
+        help=(
+            "Model that produced the exports (must be a non-reconstruction animation "
+            "model card; reconstruction DNA models are rejected)."
+        ),
+    )
+    ap.add_argument(
         "--out-meta",
         "--out-json",
         dest="out_meta",
@@ -345,6 +363,12 @@ def main() -> None:
     args = ap.parse_args()
 
     configure_logging(args.log_level)
+    try:
+        model_name = require_animation_model(args.model_name)
+    except ValueError as ex:
+        _LOG.error("%s", ex)
+        sys.exit(2)
+
     root = os.path.abspath(os.path.expanduser(args.root))
     out_path = args.out_meta or os.path.join(
         root, f"dynamic_metrics_{args.dataset}.meta.json"
@@ -370,6 +394,7 @@ def main() -> None:
     report: Dict[str, Any] = {
         "root": root,
         "dataset": args.dataset,
+        "model_name": model_name,
         "psnr_definition": PSNR_DEFINITION,
         "lpips_net": args.lpips_net,
         "view_tag": args.view_tag,
@@ -377,9 +402,10 @@ def main() -> None:
     }
 
     _LOG.info(
-        "root=%s dataset=%s runs=%s device=%s",
+        "root=%s dataset=%s model=%s runs=%s device=%s",
         root,
         args.dataset,
+        model_name,
         len(run_names),
         device,
     )

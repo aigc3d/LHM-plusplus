@@ -59,7 +59,7 @@ For English readers, see [README in English](./README.md).
 - [x] 发布代码与预训练权重
 - [x] HuggingFace 演示集成 🤗🤗🤗
 - [x] **Benchmarks — 动态重建（dynamic reconstruction）：** 评测代码与验证数据（**NeuMan**、**SelfCapture**、**Vid2Avatar**），见 [动态 Benchmark 评测](#动态-benchmark-评测evaluation)
-- [ ] **Benchmarks — 新视角/新姿态合成（novel view/pose synthesis）：** TODO（**THuman-2.1**、**DNA-Rendering** 等）
+- [ ] **Benchmarks — 新视角/新姿态合成（novel view/pose synthesis）：** TODO（**THuman-2.1** 等）；**DNA-Rendering** 数据下载脚本（`--download` / `--untar`）已提供，评测指标后续（见 [Reconstruction benchmark 下载](#reconstruction-benchmark-下载)）
 - [ ] ModelScope Space 在线演示
 - [ ] 发布训练与测试数据（许可可用）
 - [ ] 发布训练代码 
@@ -379,6 +379,26 @@ python tools/metrics/compute_dynamic_metrics.py --root ./exps/benchmarks/dynamic
 ```
 
 每个 dataset 会在 `./exps/benchmarks/dynamic/` 下生成 `dynamic_metrics_<dataset>.meta.json`。
+
+### Reconstruction benchmark 下载
+
+**DNA-Rendering** 新视角 / 新姿态合成评测数据：**16** 个 test scene，约 **100 GB** 按相机拆分的 tar 包。体积较大，**下载与解压分两步**执行（可先 `--download`，确认磁盘空间后再 `--untar`）。
+
+数据位于 `evaluation/reconstruction_benchmark/`（已在 `.gitignore`）。ModelScope：[`Damo_XR_Lab/LHMPP-DNA-Benchmark`](https://www.modelscope.cn/models/Damo_XR_Lab/LHMPP-DNA-Benchmark)。
+
+```bash
+# 第一步：从 ModelScope 下载全部 scene 的 tar（约 100 GB）
+python scripts/download_evaluation/download_reconstruction_benchmark.py --download
+
+# 第二步：解压全部 tar（需额外磁盘；tar 文件会保留）
+python scripts/download_evaluation/download_reconstruction_benchmark.py --untar
+
+# 可选：仅处理单个 scene — 下载或解压该 scene 下全部 {scene_id}-Cam*.tar
+python scripts/download_evaluation/download_reconstruction_benchmark.py --download --scene_id 0012_09
+python scripts/download_evaluation/download_reconstruction_benchmark.py --untar --scene_id 0012_09
+```
+
+`--scene_id` 按 scene 前缀过滤（如 `0012_09` → `0012_09-Cam00.tar`、`0012_09-Cam01.tar` …）。`--untar` 将 tar 内路径（如 `0012_09-Cam00/`）解压到 `reconstruction_benchmark/`，不会额外套一层同名目录。不加 `--force` 时重复运行会跳过已有文件。本 benchmark 的推理与指标脚本尚未提供。
 
 
 ## 更多工作

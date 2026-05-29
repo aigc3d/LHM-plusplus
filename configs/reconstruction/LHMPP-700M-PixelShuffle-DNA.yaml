@@ -1,0 +1,278 @@
+# LHMPP-700M-PixelShuffle-DNA: DNA-Rendering novel-view / novel-pose reconstruction.
+# Weights: ModelScope ``Damo_XR_Lab/LHMPP-700M-PixelShuffle-DNA`` (CLI tag ``LHMPP-700M-PS-DNA``).
+# Set ``dataset.subsets[*].root_dirs`` / ``meta_path`` before training; for benchmark inference
+# use ``--root-dirs`` and ``--meta-path`` (defaults under ``evaluation/reconstruction_benchmark/``).
+
+experiment:
+  type: lrm
+  seed: 42
+  parent: LHMPP-DNA-Reconstruction
+  child: LHMPP-700M-PixelShuffle-DNA-inference
+model:
+  model_name: LHMA4O
+  encoder_type: dinov2
+  encoder_model_name: dinov2_vitl14_reg
+  encoder_feat_dim: 1024
+  encoder_freeze: true
+  latent_query_points_type: e2e_points
+  pcl_dim: 1024
+  use_face_id: true
+  facesr: true
+  transformer_decoder:
+    type: patch_efficient_pvt_mm_encoder_decoder_dense
+    point_backbone:
+      in_channels: 6
+      order:
+      - z
+      - z-trans
+      - hilbert
+      - hilbert-trans
+      stride:
+      - 1
+      - 2
+      - 2
+      enc_depths:
+      - 4
+      - 4
+      - 4
+      - 4
+      enc_channels:
+      - 64
+      - 128
+      - 256
+      - 512
+      enc_num_head:
+      - 4
+      - 8
+      - 16
+      - 16
+      enc_patch_size:
+      - 4096
+      - 4096
+      - 2048
+      - 1024
+      dec_depths:
+      - 4
+      - 4
+      - 4
+      dec_channels:
+      - 128
+      - 256
+      - 512
+      dec_num_head:
+      - 16
+      - 16
+      - 16
+      dec_patch_size:
+      - 4096
+      - 4096
+      - 2048
+      mlp_ratio: 4
+      qkv_bias: true
+      qk_scale: null
+      attn_drop: 0.0
+      proj_drop: 0.0
+      drop_path: 0.0
+      shuffle_orders: false
+      pre_norm: true
+      enable_rpe: false
+      enable_flash: true
+      upcast_attention: false
+      upcast_softmax: false
+      traceable: true
+      mask_token: false
+      enc_mode: false
+      freeze_encoder: false
+      decoder_concat_stop_feat: 2
+    image_backbone:
+      depth: 3
+      aa_order:
+      - frame
+    freeze_image: true
+    freeze_point: true
+    merge_ratio: 0.0
+  transformer_type: mm
+  transformer_heads: 16
+  transformer_dim: ${model.pcl_dim}
+  transformer_layers: 1
+  tf_grad_ckpt: true
+  encoder_grad_ckpt: true
+  # User: directory with SMPL-X / FLAME assets (see INSTALL.md / prior download).
+  human_model_path: ./pretrained_models/human_model_files
+  smplx_subdivide_num: 1
+  smplx_type: smplx_diffused_voxel
+  gs_query_dim: 128
+  gs_use_rgb: true
+  gs_sh: 3
+  dense_sample_pts: 160000
+  render_features: true
+  dpt_decoder:
+    type: mlp_pixelshuffle
+    enc_channels: 128
+    img_dim: 1024
+    depth: 4
+    gradient_checkpointing: true
+    enc_patch_size: 7
+    pixel_shuffle_factor: 2
+  dpt_patch_size: 1
+  dpt_input: feats
+  gs_rendering: featbacksplat
+  deform_head_type: attn
+  gs_mlp_network_config:
+    n_neurons: 512
+    n_hidden_layers: 2
+    activation: silu
+  gs_xyz_offset_max_step: 1.0
+  gs_clip_scaling:
+  - 0
+  - 0.05
+  - 0.05
+  - 3000
+  expr_param_dim: 100
+  shape_param_dim: 10
+  predict_shape_dim: 10
+  use_pred_shape_for_render: false
+  shape_head:
+    dim_in: 1024
+    trunk_depth: 2
+    num_iterations: 4
+    num_heads: 16
+    mlp_ratio: 4.0
+    init_values: 0.01
+  fix_opacity: false
+  fix_rotation: false
+  cano_pose_type: 1
+dataset:
+  subsets:
+  - name: dna_lhmpp_folder
+    # User: untarred DNA LHMPP folders ({scene_id}-Cam{XX}/imgs_png|samurai_seg|smplx_params|flame_params).
+    root_dirs: null
+    meta_path:
+      # User: train/val scene-camera JSON lists; benchmark inference uses --meta-path instead.
+      train: null
+      val: null
+    sample_rate: 1.0
+    random_sample_ratio: 0.95
+    use_flame: true
+    task_mode: mixed
+    novel_pose_prob: 0.8
+    num_frames: 150
+    val_ref_camera_ids: [45, 4, 39, 10, 34, 18, 28, 23]
+    val_ref_frame_id: 0
+    processing_pipeline:
+    - name: PadRatio
+      target_ratio: 5/3
+      tgt_max_size_list:
+      - 840
+      val: true
+    - name: ToTensor
+      val: true
+    src_head_size: 112
+    ref_img_size: 8
+    womask: false
+  sample_side_views: 7
+  source_image_res: 512
+  render_image:
+    low: 420
+    high: 420
+    region: null
+  num_train_workers: 4
+  multiply: 14
+  num_val_workers: 2
+  pin_mem: true
+  repeat_num: 20
+  constrain_cano: false
+train:
+  mixed_precision: bf16
+  find_unused_parameters: false
+  loss_func:
+    pixel_loss: l1
+    ball_loss:
+      type: heuristic
+      group:
+        head: 1.0
+        lower_body: 100.0
+        upper_body: 1000.0
+        hands: 10000.0
+        constrain_body: 1000.0
+    offset_loss:
+      type: heuristic
+      group:
+        head: 1.0
+        lower_body: 1.0
+        upper_body: 1.0
+        hands: 1000.0
+    opacity_loss:
+      type: heuristic
+      group:
+        lower_body: 1.0
+  loss:
+    gs_loss_weight: 0.5
+    tv_weight: -1
+    photometric_loss:
+      vanilla_w: 1
+      prior_w: "linear:0:0.0:0.5:5000"
+      vanilla:
+        pixel_weight: 1.0
+        masked_pixel_weight: 1.0
+        perceptual_weight: 1.0
+        mask_weight: 1.0
+        face_id_weight: "linear:0:0.05:0.1:5000"
+      prior:
+        model_perception:
+          lambda_d: 1.0
+          lambda_s: 1.0
+          dinov2_layers: [8, 11]
+          # User: local SAM2 checkpoint; null disables if training without prior loss.
+          sam2_ckpt: null
+          sam2_cfg: configs/sam2.1/sam2.1_hiera_t.yaml
+          sam2_image_size: 512
+    regularization_loss:
+      regularization_w: 1.0
+      opacity_weight: 0.001
+      asap_weight: 10.0
+      acap_weight: 1.0
+      shape_reg_weight: "cosine:0:1.0:0.05:5000"
+      shape_reg_gamma: 0.6
+  optim:
+    lr: 0.0001
+    weight_decay: 0.0005
+    beta1: 0.9
+    beta2: 0.95
+    clip_grad_norm: 0.1
+  scheduler:
+    type: cosine
+    warmup_real_iters: 0
+  batch_size: 1
+  accum_steps: 1
+  epochs: 1000
+  debug_global_steps: null
+  human_lrm: null
+  required_gs_loss: true
+  human_lrm_a4o: null
+val:
+  batch_size: 1
+  global_step_period: 500
+  debug_batches: 10
+saver:
+  auto_resume: false
+  # User: pretrained checkpoint (.safetensors); inference uses Hub download or --model-path.
+  load_model: null
+  checkpoint_root: ./exps/checkpoints
+  checkpoint_global_steps: 1000
+  checkpoint_keep_level: 100
+logger:
+  stream_level: WARNING
+  log_level: INFO
+  log_root: ./exps/logs
+  tracker_root: ./exps/trackers
+  enable_profiler: false
+  trackers:
+  - tensorboard
+  image_monitor:
+    train_global_steps: 500
+    samples_per_log: 4
+compile:
+  suppress_errors: true
+  print_specializations: true
+  disable: true
