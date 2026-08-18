@@ -408,7 +408,7 @@ python scripts/download_evaluation/download_reconstruction_benchmark.py --untar 
 
 ## ✨ Star History
 
-[![Star History](https://api.star-history.com/svg?repos=aigc3d/LHM-plusplus)](https://star-history.com/#aigc3d/LHM-plusplus&Date)
+[![Star History](https://star-history.dera.page/svg?repos=aigc3d/LHM-plusplus)](https://star-history.dera.page/#aigc3d/LHM-plusplus&Date)
 
 ## 引用 
 
